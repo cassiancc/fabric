@@ -35,10 +35,8 @@ import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryLoader;
 import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.util.Identifier;
 
 import net.fabricmc.fabric.api.event.registry.DynamicRegistrySetupCallback;
-import net.fabricmc.fabric.impl.registry.sync.DynamicRegistriesImpl;
 import net.fabricmc.fabric.impl.registry.sync.DynamicRegistryViewImpl;
 
 @Mixin(RegistryLoader.class)
@@ -78,28 +76,5 @@ public class RegistryLoaderMixin {
 		}
 
 		DynamicRegistrySetupCallback.EVENT.invoker().onRegistrySetup(new DynamicRegistryViewImpl(registries));
-	}
-
-	// Vanilla doesn't mark namespaces in the directories of dynamic registries at all,
-	// so we prepend the directories with the namespace if it's a modded registry registered using the Fabric API.
-	@WrapOperation(
-			method = {
-					"loadFromNetwork(Ljava/util/Map;Lnet/minecraft/resource/ResourceFactory;Lnet/minecraft/registry/RegistryOps$RegistryInfoGetter;Lnet/minecraft/registry/MutableRegistry;Lcom/mojang/serialization/Decoder;Ljava/util/Map;)V",
-					"loadFromResource(Lnet/minecraft/resource/ResourceManager;Lnet/minecraft/registry/RegistryOps$RegistryInfoGetter;Lnet/minecraft/registry/MutableRegistry;Lcom/mojang/serialization/Decoder;Ljava/util/Map;)V"
-			},
-			at = @At(
-					value = "INVOKE",
-					target = "Lnet/minecraft/registry/RegistryKeys;getPath(Lnet/minecraft/registry/RegistryKey;)Ljava/lang/String;"
-			)
-	)
-	private static String prependDirectoryWithNamespace(RegistryKey<? extends Registry<?>> registryKey, Operation<String> original) {
-		String originalDirectory = original.call(registryKey);
-		Identifier id = registryKey.getValue();
-		if (!id.getNamespace().equals(Identifier.DEFAULT_NAMESPACE)
-				&& DynamicRegistriesImpl.FABRIC_DYNAMIC_REGISTRY_KEYS.contains(registryKey)) {
-			return id.getNamespace() + "/" + originalDirectory;
-		}
-
-		return originalDirectory;
 	}
 }
